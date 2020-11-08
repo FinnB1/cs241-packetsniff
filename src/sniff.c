@@ -6,9 +6,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <pcap.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
+#include <netinet/tcp.h>
 #include <netinet/in.h>
 
 
@@ -22,9 +24,17 @@ struct UDP_hdr {
   u_short uh_sum;
 };
 
+void sig_handler(int signo) {
+  if (signo == SIGINT) {
+    printf("\nExiting\n");
+    exit(0);
+  }
+}
+
 // Application main sniffing loop
 void sniff(char *interface, int verbose) {
   // Open network interface for packet capture
+  signal(SIGINT, sig_handler);
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_t *pcap_handle = pcap_open_live(interface, 4096, 1, 0, errbuf);
   if (pcap_handle == NULL) {
@@ -47,7 +57,7 @@ void sniff(char *interface, int verbose) {
     } else {
       // Optional: dump raw data to terminal
       if (verbose) {
-        ip_dump(packet, header.len);
+        // tcp_dump(packet, header.len);
       }
       // Dispatch packet for processing
       dispatch(&header, packet, verbose);
@@ -57,6 +67,7 @@ void sniff(char *interface, int verbose) {
 
 void tcp_dump(const unsigned char *data, int length) {
   struct ip *ip;
+  struct tcphdr *tcp;
 
   data += sizeof(struct ether_header);
   length -= sizeof(struct ether_header);
@@ -70,12 +81,14 @@ void tcp_dump(const unsigned char *data, int length) {
 
   data += IP_header_length;
   length -= IP_header_length;
-  
 
-  printf("UDP src_port = %d dst_port = %d length = %d\n",
-          ntohs(udp->uh_sport),
-          ntohs(udp->uh_dport),
-          ntohs(udp->uh_ulen));
+  tcp = (struct tcphdr*) data;
+
+  printf("TCP src_port = %d dst_port = %d\nsyn = %d ack = %d\n",
+          ntohs(tcp->th_sport),
+          ntohs(tcp->th_dport),
+          ntohs(tcp->syn),
+          ntohs(tcp->th_ack));
 }
 
 void udp_dump(const unsigned char *data, int length) {
