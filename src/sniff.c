@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <pcap.h>
+#include <arpa/inet.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -85,10 +86,10 @@ void tcp_dump(const unsigned char *data, int length) {
   tcp = (struct tcphdr*) data;
 
   printf("TCP src_port = %d dst_port = %d\nsyn = %d ack = %d\n",
-          ntohs(tcp->th_sport),
-          ntohs(tcp->th_dport),
+          ntohs(tcp->source),
+          ntohs(tcp->dest),
           ntohs(tcp->syn),
-          ntohs(tcp->th_ack));
+          ntohs(tcp->ack));
 }
 
 void udp_dump(const unsigned char *data, int length) {
