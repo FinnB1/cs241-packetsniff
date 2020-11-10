@@ -1,9 +1,13 @@
 #include "analysis.h"
 
 #include <pcap.h>
+#include <string.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
+
+#include "sniff.h"
+#include "dynarray.h"
 
 void analyse(struct pcap_pkthdr *header,
              const unsigned char *packet,
@@ -29,10 +33,13 @@ void analyse(struct pcap_pkthdr *header,
 
   tcp = (struct tcphdr*) packet;
 
-  long count = 0;
-
   if (tcp->syn == 1) {
-      count++;
+      syn_count++;
+      //check if internal ?
+      if (strcmp(inet_ntoa(ip->ip_src), "10.0.2.15") != 0){
+        dynarray_insert(&syn_adds, inet_ntoa(ip->ip_src));
+      }
+        
   }
 
   if (verbose == 1) {

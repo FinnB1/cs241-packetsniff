@@ -16,6 +16,7 @@
 
 
 #include "dispatch.h"
+#include "dynarray.h"
 
 
 struct UDP_hdr {
@@ -25,9 +26,14 @@ struct UDP_hdr {
   u_short uh_sum;
 };
 
+dynamic_array syn_adds;
+int syn_count;
+
 void sig_handler(int signo) {
   if (signo == SIGINT) {
     printf("\nExiting\n");
+    printf("Total number of syn packets: %d\n", syn_count);
+    dynarray_close(&syn_adds);
     exit(0);
   }
 }
@@ -47,6 +53,10 @@ void sniff(char *interface, int verbose) {
   // Capture packets (very ugly code)
   struct pcap_pkthdr header;
   const unsigned char *packet;
+
+  //initialise dynamic array
+  dynarray_init(&syn_adds, 5);
+
   while (1) {
     // Capture a  packet
     packet = pcap_next(pcap_handle, &header);
@@ -58,7 +68,7 @@ void sniff(char *interface, int verbose) {
     } else {
       // Optional: dump raw data to terminal
       if (verbose) {
-        // tcp_dump(packet, header.len);
+         //ip_dump(packet, header.len);
       }
       // Dispatch packet for processing
       dispatch(&header, packet, verbose);
