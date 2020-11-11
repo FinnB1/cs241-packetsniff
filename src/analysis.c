@@ -23,7 +23,6 @@ void analyse(struct pcap_pkthdr *header,
 
   ip = (struct ip*) packet;
   unsigned int IP_header_length = ip->ip_hl * 4;
-
   if (ip->ip_p != 6) {
     return;
   }
@@ -32,12 +31,13 @@ void analyse(struct pcap_pkthdr *header,
   length -= IP_header_length;
 
   tcp = (struct tcphdr*) packet;
-
   if (tcp->syn == 1) {
-      syn_count++;
-      //check if internal ?
+      
+      //check if packet is incoming from external ip ?
       if (strcmp(inet_ntoa(ip->ip_src), "10.0.2.15") != 0){
         dynarray_insert(&syn_adds, inet_ntoa(ip->ip_src));
+        //printf("%d\n", dynarray_size(&syn_adds));
+        syn_count++;
       }
         
   }

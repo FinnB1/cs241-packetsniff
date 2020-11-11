@@ -33,6 +33,7 @@ void sig_handler(int signo) {
   if (signo == SIGINT) {
     printf("\nExiting\n");
     printf("Total number of syn packets: %d\n", syn_count);
+    printf("Total number of Unique IP Addresses found: %d\n", dynarray_size(&syn_adds));
     dynarray_close(&syn_adds);
     exit(0);
   }
