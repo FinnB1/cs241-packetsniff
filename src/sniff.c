@@ -18,22 +18,21 @@
 #include "dispatch.h"
 #include "dynarray.h"
 
-
-struct UDP_hdr {
-  u_short uh_sport;
-  u_short uh_dport;
-  u_short uh_ulen;
-  u_short uh_sum;
-};
-
 dynamic_array syn_adds;
-int syn_count;
+int syn_count = 0;
+int arp_count = 0;
+int blacklist_count = 0;
 
 void sig_handler(int signo) {
   if (signo == SIGINT) {
     printf("\nExiting\n");
+    printf("----SYN DETECTION----\n");
     printf("Total number of syn packets: %d\n", syn_count);
     printf("Total number of Unique IP Addresses found: %d\n", dynarray_size(&syn_adds));
+    printf("----ARP POISONING----\n");
+    printf("Total number of ARP responses: %d\n", arp_count);
+    printf("----URL BLACKLIST----\n");
+    printf("Total number of requests to blacklisted URLs: %d\n", blacklist_count);
     dynarray_close(&syn_adds);
     exit(0);
   }
@@ -69,7 +68,7 @@ void sniff(char *interface, int verbose) {
     } else {
       // Optional: dump raw data to terminal
       if (verbose) {
-         //ip_dump(packet, header.len);
+         dump(packet, header.len);
       }
       // Dispatch packet for processing
       dispatch(&header, packet, verbose);
@@ -103,7 +102,7 @@ void tcp_dump(const unsigned char *data, int length) {
           ntohs(tcp->ack));
 }
 
-void udp_dump(const unsigned char *data, int length) {
+/*void udp_dump(const unsigned char *data, int length) {
   struct ip *ip;
   struct UDP_hdr *udp;
   unsigned int IP_header_length;
@@ -123,7 +122,7 @@ void udp_dump(const unsigned char *data, int length) {
           ntohs(udp->uh_sport),
           ntohs(udp->uh_dport),
           ntohs(udp->uh_ulen));
-}
+}*/
 
 void ip_dump(const unsigned char *data, int length) {
   struct ip *ip;

@@ -5,6 +5,8 @@
 
 extern dynamic_array syn_adds;
 extern int syn_count;
+extern int arp_count;
+extern int blacklist_count;
 
 void sig_handler(int signo);
 void sniff(char *interface, int verbose);
