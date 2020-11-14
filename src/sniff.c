@@ -34,6 +34,7 @@ void sig_handler(int signo) {
     printf("----URL BLACKLIST----\n");
     printf("Total number of requests to blacklisted URLs: %d\n", blacklist_count);
     dynarray_close(&syn_adds);
+    close_threads();
     exit(0);
   }
 }

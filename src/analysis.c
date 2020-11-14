@@ -1,6 +1,7 @@
 #include "analysis.h"
 
 #include <pcap.h>
+#include <pthread.h>
 #include <string.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
@@ -8,6 +9,8 @@
 
 #include "sniff.h"
 #include "dynarray.h"
+
+pthread_mutex_t syn_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void arp(const unsigned char *packet, int verbose) {
     // ethernet arp structure
@@ -87,11 +90,12 @@ void blacklist(const unsigned char *packet, int length, int verbose) {
   // if it matches the blacklisted URL then increment count
   if (strcmp(token, "www.google.com") == 0) {
     blacklist_count++;
-  }
-  if (verbose == 1) {
+    if (verbose == 1) {
     printf("----BLACKLISTED URL----\n");
     printf("Outgoing packet to www.google.com found\n\n");
   }
+  }
+  
 }
 
 void analyse(struct pcap_pkthdr *header,
@@ -120,6 +124,7 @@ void analyse(struct pcap_pkthdr *header,
   if (ip->ip_p != 6) {
     return;
   }
+
   //skip IP header
   packet += iphl;
   length -= iphl;
@@ -139,23 +144,27 @@ void analyse(struct pcap_pkthdr *header,
       //check if packet is incoming from external ip
       if (strcmp(inet_ntoa(ip->ip_src), "10.0.2.15") != 0){
         //insert IP address to dynamic array
-        dynarray_insert(&syn_adds, inet_ntoa(ip->ip_src));
-        //increment count
-        syn_count++;
+
         if (verbose == 1) {
-          printf("----SYN PACKET RECEIVED----\n");
+          printf("----PACKET %d RECEIVED----\n", syn_count);
           printf("Source IP address: %s\n", inet_ntoa(ip->ip_src));
           printf("Source Port: %d\n", ntohs(tcp->source));
           printf("Destination Port: %d\n", ntohs(tcp->dest));
           printf("SYN: %d\n", tcp->syn);
           printf("ACK: %d\n", tcp->ack);
           printf("\n");
-      }
+        }
+        pthread_mutex_lock(&syn_lock);
+        dynarray_insert(&syn_adds, inet_ntoa(ip->ip_src));
+        //increment count
+        syn_count++;
+        pthread_mutex_unlock(&syn_lock);
       }
       
         
   }
 
+  pthread_mutex_destroy(&syn_lock);
   
   
 }
