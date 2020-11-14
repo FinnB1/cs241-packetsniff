@@ -9,19 +9,63 @@
 #include "sniff.h"
 #include "dynarray.h"
 
-void arp(const unsigned char *packet) {
-  // add verbose stuff
+void arp(const unsigned char *packet, int verbose) {
+    // ethernet arp structure
+    packet += ETH_HLEN;
+    int i;
     struct ether_arp *arp_header = (struct ether_arp *) packet;
+    // if ARP message is a response then increment count
     if (ntohs(arp_header->arp_op) == ARPOP_REPLY) {
       arp_count++;
     }
+
+    if (verbose == 1) {
+      printf("----ARP MESSAGE RECEIVED----\n");
+      printf("Sender HWA: ");
+      for (i = 0; i < 6; ++i) {
+        printf("%02x", arp_header->arp_sha[i]);
+        if (i<5) {
+          printf(":");
+        }
+      }
+      printf("\n");
+      printf("Sender PA: ");
+      for (i = 0; i < 4; ++i) {
+        printf("%02x", arp_header->arp_spa[i]);
+        if (i<3) {
+          printf(":");
+        }
+      }
+      printf("\n");
+      printf("Target HWA: ");
+      for (i = 0; i < 6; ++i) {
+        printf("%02x", arp_header->arp_tha[i]);
+        if (i<5) {
+          printf(":");
+        }
+      }
+      printf("\n");
+      printf("Target PA: ");
+      for (i = 0; i < 4; ++i) {
+        printf("%02x", arp_header->arp_spa[i]);
+        if (i<3) {
+          printf(":");
+        }
+      }
+      printf("\n");
+      printf("ARP Operation: %d\n", ntohs(arp_header->arp_op));
+      printf("\n");
+    }
 }
 
-void blacklist(const unsigned char *packet, int length) {
+void blacklist(const unsigned char *packet, int length, int verbose) {
+  // strings for comparison
   char * get = "GET";
   char * post = "POST";
   char * host = "Host:";
+  //tcp header
   struct tcphdr *tcp = (struct tcphdr *) packet;
+  //move past tcp header to packet data
   packet+= tcp->doff * 4;
   length-= tcp->doff * 4;
 
@@ -31,69 +75,88 @@ void blacklist(const unsigned char *packet, int length) {
     return;
   }
   char *token;
+  // split string into tokens by line
   token = strtok(payload, "\r\n");
+  // check if line starts with "Host:"
   while (strncmp(token, host, strlen(host)) != 0) {
     token = strtok(NULL, "\r\n");
   }
+  // split string by whitespace
   token = strtok(token, " ");
   token = strtok(NULL, " ");
+  // if it matches the blacklisted URL then increment count
   if (strcmp(token, "www.google.com") == 0) {
     blacklist_count++;
+  }
+  if (verbose == 1) {
+    printf("----BLACKLISTED URL----\n");
+    printf("Outgoing packet to www.google.com found\n\n");
   }
 }
 
 void analyse(struct pcap_pkthdr *header,
              const unsigned char *packet,
              int verbose) {
-  // TODO your part 2 code here
+
+  //headers
   struct ip *ip;
   struct tcphdr *tcp;
   struct ether_header *eth_header = (struct ether_header *) packet;
   int length = header->len;
+  // if packet contains ARP message
   if (ntohs(eth_header->ether_type) == ETHERTYPE_ARP) {
-    packet += ETH_HLEN;
-    arp(packet);
+    //process
+    arp(packet, verbose);
   }
     
-  
+  //move past ethernet header
   packet += sizeof(struct ether_header);
   length -= sizeof(struct ether_header);
 
   ip = (struct ip*) packet;
-  unsigned int IP_header_length = ip->ip_hl * 4;
+  // calculate ip header length
+  unsigned int iphl = ip->ip_hl * 4;
+  // if protocol is not TCP return
   if (ip->ip_p != 6) {
     return;
   }
+  //skip IP header
+  packet += iphl;
+  length -= iphl;
 
-  packet += IP_header_length;
-  length -= IP_header_length;
-
+  // tcp header
   tcp = (struct tcphdr*) packet;
 
   // check if ip is src (aka packet is outgoing) and port is 80 (http)
   if (strcmp(inet_ntoa(ip->ip_src), "10.0.2.15") == 0 && ntohs(tcp->dest) == 80) {
-    blacklist(packet, length);
+    //process
+    blacklist(packet, length, verbose);
   }
 
-  
+  // if syn bit is set to 1
   if (tcp->syn == 1) {
       
-      //check if packet is incoming from external ip ?
+      //check if packet is incoming from external ip
       if (strcmp(inet_ntoa(ip->ip_src), "10.0.2.15") != 0){
+        //insert IP address to dynamic array
         dynarray_insert(&syn_adds, inet_ntoa(ip->ip_src));
-        //printf("%d\n", dynarray_size(&syn_adds));
+        //increment count
         syn_count++;
+        if (verbose == 1) {
+          printf("----SYN PACKET RECEIVED----\n");
+          printf("Source IP address: %s\n", inet_ntoa(ip->ip_src));
+          printf("Source Port: %d\n", ntohs(tcp->source));
+          printf("Destination Port: %d\n", ntohs(tcp->dest));
+          printf("SYN: %d\n", tcp->syn);
+          printf("ACK: %d\n", tcp->ack);
+          printf("\n");
       }
+      }
+      
         
   }
 
-  if (verbose == 1) {
-    printf("TCP src_port = %d dst_port = %d\nsyn = %d ack = %d\n",
-          ntohs(tcp->source),
-          ntohs(tcp->dest),
-          ntohs(tcp->syn),
-          ntohs(tcp->ack));
-  }
+  
   
 }
 
