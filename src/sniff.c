@@ -25,6 +25,7 @@ int blacklist_count = 0;
 
 void sig_handler(int signo) {
   if (signo == SIGINT) {
+    printqueue();
     printf("\nExiting\n");
     printf("----SYN DETECTION----\n");
     printf("Total number of syn packets: %d\n", syn_count);

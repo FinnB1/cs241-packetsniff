@@ -15,10 +15,10 @@ struct packet_queue {
   unsigned char *packet;
   struct packet_queue *next;
 };
-struct packet_queue *head;
-struct packet_queue *tail;
+struct packet_queue *head = NULL;
+struct packet_queue *tail = NULL;
 
-int run;
+int run = 0;
 int packets = 0;
 int v;
 
@@ -29,7 +29,7 @@ void *dequeue(void *arg) {
       pthread_cond_wait(&cond, &lock);
     }
     if (run) {
-          struct packet_queue *tmp = head;
+      struct packet_queue *tmp = head;
       struct packet_queue *packet2go = (struct packet_queue *) malloc(sizeof(struct packet_queue));
       *packet2go = *head;
       if (head == tail) {
@@ -39,13 +39,12 @@ void *dequeue(void *arg) {
       else {
        head = head->next;  
       }
+      // problem in this code section, getting stuck on first packet and problem with setting of next. next is coming up null which should not occur
+      // as it should only hit this loop when there is more than 0 packets;
       packets--;
       free(tmp);
       pthread_mutex_unlock(&lock);
       analyse(packet2go->header, packet2go->packet, v);
-
-
-
       free(packet2go);
     }
     else {
@@ -59,18 +58,26 @@ void *dequeue(void *arg) {
 }
 
 void enqueue(struct packet_queue *pq) {
-  pthread_mutex_lock(&lock);
+  //pthread_mutex_lock(&lock);
   if (head == NULL) {
     head = pq;
-    tail = pq;
   }
   else {
+    struct packet_queue *current = head;
+    while (current->next != NULL) {
+      current = current->next;
+    }
+    current->next = pq;
+  }
+
+  
+  /*else {
     tail->next = pq;
     tail = pq;
-  }
+  }*/
   packets++;
   pthread_cond_signal(&cond);
-  pthread_mutex_unlock(&lock);
+  //pthread_mutex_unlock(&lock);
 }
 
 void close_threads() {
@@ -87,6 +94,15 @@ void close_threads() {
   }
 }
 
+void printqueue() {
+  struct packet_queue * current = head;
+  int i = 50;
+  while (i > 0 && current != NULL) {
+    printf("%d\n", current->header->len);
+    current = current->next;
+    i--;
+  }
+}
 
 void dispatch(struct pcap_pkthdr *header,
               const unsigned char *packet,
@@ -96,12 +112,12 @@ void dispatch(struct pcap_pkthdr *header,
   // it is a simple passthrough as this skeleton is single-threaded.
   v = verbose;
   int i;
-  if (run != 1) {
+  /*if (run != 1) {
     run = 1;
     for (i= 0; i < 4; i++) {
       pthread_create(&threads[i], NULL, dequeue, (void *) NULL);
     }
-  }
+  } */
 
   struct packet_queue *next_packet = (struct packet_queue *) malloc(sizeof(struct packet_queue));
   next_packet->header = (struct pcap_pkthdr *) header;
