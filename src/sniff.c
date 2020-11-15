@@ -25,7 +25,7 @@ int blacklist_count = 0;
 
 void sig_handler(int signo) {
   if (signo == SIGINT) {
-    printqueue();
+    //printqueue();
     printf("\nExiting\n");
     printf("----SYN DETECTION----\n");
     printf("Total number of syn packets: %d\n", syn_count);
@@ -35,7 +35,7 @@ void sig_handler(int signo) {
     printf("----URL BLACKLIST----\n");
     printf("Total number of requests to blacklisted URLs: %d\n", blacklist_count);
     dynarray_close(&syn_adds);
-    close_threads();
+    //close_threads();
     exit(0);
   }
 }

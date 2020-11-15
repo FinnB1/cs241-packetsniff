@@ -11,6 +11,8 @@
 #include "dynarray.h"
 
 pthread_mutex_t syn_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t blacklist_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t arp_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void arp(const unsigned char *packet, int verbose) {
     // ethernet arp structure
@@ -19,7 +21,9 @@ void arp(const unsigned char *packet, int verbose) {
     struct ether_arp *arp_header = (struct ether_arp *) packet;
     // if ARP message is a response then increment count
     if (ntohs(arp_header->arp_op) == ARPOP_REPLY) {
+      pthread_mutex_lock(&arp_lock);
       arp_count++;
+      pthread_mutex_unlock(&arp_lock);
     }
 
     if (verbose == 1) {
@@ -89,7 +93,9 @@ void blacklist(const unsigned char *packet, int length, int verbose) {
   token = strtok(NULL, " ");
   // if it matches the blacklisted URL then increment count
   if (strcmp(token, "www.google.com") == 0) {
+    pthread_mutex_lock(&blacklist_lock);
     blacklist_count++;
+    pthread_mutex_unlock(&blacklist_lock);
     if (verbose == 1) {
     printf("----BLACKLISTED URL----\n");
     printf("Outgoing packet to www.google.com found\n\n");
@@ -98,16 +104,15 @@ void blacklist(const unsigned char *packet, int length, int verbose) {
   
 }
 
-void analyse(struct pcap_pkthdr *header,
+void analyse(int length,
              const unsigned char *packet,
              int verbose) {
-
   //headers
   struct ip *ip;
   struct tcphdr *tcp;
   struct ether_header *eth_header = (struct ether_header *) packet;
-  int length = header->len;
   // if packet contains ARP message
+  int i;
   if (ntohs(eth_header->ether_type) == ETHERTYPE_ARP) {
     //process
     arp(packet, verbose);
@@ -153,6 +158,7 @@ void analyse(struct pcap_pkthdr *header,
           printf("SYN: %d\n", tcp->syn);
           printf("ACK: %d\n", tcp->ack);
           printf("\n");
+
         }
         pthread_mutex_lock(&syn_lock);
         dynarray_insert(&syn_adds, inet_ntoa(ip->ip_src));
@@ -163,9 +169,6 @@ void analyse(struct pcap_pkthdr *header,
       
         
   }
-
-  pthread_mutex_destroy(&syn_lock);
-  
   
 }
 
