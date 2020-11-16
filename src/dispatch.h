@@ -2,7 +2,10 @@
 #define CS241_DISPATCH_H
 
 #include <pcap.h>
-
-void dispatch(struct pcap_pkthdr *header, const unsigned char *packet, int verbose);
+void printqueue();
+void close_threads();
+void dispatch(struct pcap_pkthdr *header, 
+              const unsigned char *packet,
+              int verbose);
 
 #endif

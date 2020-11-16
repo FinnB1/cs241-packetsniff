@@ -104,7 +104,7 @@ void blacklist(const unsigned char *packet, int length, int verbose) {
   
 }
 
-void analyse(struct pcap_pkthdr *header,
+void analyse(int length,
              const unsigned char *packet,
              int verbose) {
   //headers
@@ -112,7 +112,6 @@ void analyse(struct pcap_pkthdr *header,
   struct tcphdr *tcp;
   struct ether_header *eth_header = (struct ether_header *) packet;
   // if packet contains ARP message
-  int length = header->len;
   int i;
   if (ntohs(eth_header->ether_type) == ETHERTYPE_ARP) {
     //process
@@ -141,7 +140,8 @@ void analyse(struct pcap_pkthdr *header,
   // check if ip is src (aka packet is outgoing) and port is 80 (http)
   if (strcmp(inet_ntoa(ip->ip_src), "10.0.2.15") == 0 && ntohs(tcp->dest) == 80) {
     //process
-    blacklist(packet, length, verbose);
+    //blacklist(packet, length, verbose);
+    return;
   }
 
   // if syn bit is set to 1
