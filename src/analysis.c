@@ -104,7 +104,7 @@ void blacklist(const unsigned char *packet, int length, int verbose) {
   
 }
 
-void analyse(int length,
+void analyse(struct pcap_pkthdr *header,
              const unsigned char *packet,
              int verbose) {
   //headers
@@ -112,6 +112,7 @@ void analyse(int length,
   struct tcphdr *tcp;
   struct ether_header *eth_header = (struct ether_header *) packet;
   // if packet contains ARP message
+  int length = header->len;
   int i;
   if (ntohs(eth_header->ether_type) == ETHERTYPE_ARP) {
     //process
@@ -151,7 +152,7 @@ void analyse(int length,
         //insert IP address to dynamic array
 
         if (verbose == 1) {
-          printf("----PACKET %d RECEIVED----\n", syn_count);
+          printf("----PACKET RECEIVED----\n");
           printf("Source IP address: %s\n", inet_ntoa(ip->ip_src));
           printf("Source Port: %d\n", ntohs(tcp->source));
           printf("Destination Port: %d\n", ntohs(tcp->dest));
