@@ -35,12 +35,11 @@ void dynarray_insert(dynamic_array *dynarray, char *ip_address) {
   dynarray->used++;
 }
 
-
-
+//return number of IPs
 int dynarray_size(dynamic_array *dynarray) {
   return dynarray->used;
 }
-
+// close array and reset
 void dynarray_close(dynamic_array *dynarray) {
   dynarray->used = 0;
   dynarray->size = 0;

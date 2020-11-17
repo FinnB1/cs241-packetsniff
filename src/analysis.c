@@ -25,7 +25,7 @@ void arp(const unsigned char *packet, int verbose) {
       arp_count++;
       pthread_mutex_unlock(&arp_lock);
     }
-
+    // DEBUGGING PRINTS
     if (verbose == 1) {
       printf("----ARP MESSAGE RECEIVED----\n");
       printf("Sender HWA: ");
@@ -65,54 +65,45 @@ void arp(const unsigned char *packet, int verbose) {
     }
 }
 
+// URL blacklisting function
 void blacklist(const unsigned char *packet, int length, int verbose) {
-  // strings for comparison
-  char * get = "GET";
-  char * post = "POST";
-  char * host = "Host:";
   //tcp header
   struct tcphdr *tcp = (struct tcphdr *) packet;
   //move past tcp header to packet data
   packet+= tcp->doff * 4;
   length-= tcp->doff * 4;
-
+  
+  // convert packet data to char * (bad code)
   char *payload = (char *) packet;
-  // filter out packets that do not contain header
-  if (strncmp(payload, get, strlen(get)) != 0 && strncmp(payload, post, strlen(post)) != 0) {
-    return;
-  }
-  char *token;
-  // split string into tokens by line
-  token = strtok(payload, "\r\n");
-  // check if line starts with "Host:"
-  while (strncmp(token, host, strlen(host)) != 0) {
-    token = strtok(NULL, "\r\n");
-  }
-  // split string by whitespace
-  token = strtok(token, " ");
-  token = strtok(NULL, " ");
-  // if it matches the blacklisted URL then increment count
-  if (strcmp(token, "www.google.com") == 0) {
-    pthread_mutex_lock(&blacklist_lock);
-    blacklist_count++;
-    pthread_mutex_unlock(&blacklist_lock);
-    if (verbose == 1) {
-    printf("----BLACKLISTED URL----\n");
-    printf("Outgoing packet to www.google.com found\n\n");
-  }
+  char needle[8] = "Host";
+  char *ret;
+  // point to line containing "Host: ", if not present then skip
+  if ((ret = strstr(payload, needle)) != NULL) {
+    // trim by end of line characters
+    ret = strtok(ret, "\r\n");
+    // if equal to blacklisted URL
+    if (strcmp(ret, "Host: www.google.com") == 0) {
+      // increase count
+      pthread_mutex_lock(&blacklist_lock);
+      blacklist_count++;
+      pthread_mutex_unlock(&blacklist_lock);
+      // DEBUGGING PRINTS
+      if (verbose == 1) {
+      printf("----BLACKLISTED URL FOUND----\n");
+      printf("Outgoing packet to www.google.com found\n\n");
+      } 
+    }
   }
   
 }
 
-void analyse(int length,
-             const unsigned char *packet,
-             int verbose) {
+//main analyse function
+void analyse(int length, const unsigned char *packet, int verbose) {
   //headers
   struct ip *ip;
   struct tcphdr *tcp;
   struct ether_header *eth_header = (struct ether_header *) packet;
   // if packet contains ARP message
-  int i;
   if (ntohs(eth_header->ether_type) == ETHERTYPE_ARP) {
     //process
     arp(packet, verbose);
@@ -140,7 +131,7 @@ void analyse(int length,
   // check if ip is src (aka packet is outgoing) and port is 80 (http)
   if (strcmp(inet_ntoa(ip->ip_src), "10.0.2.15") == 0 && ntohs(tcp->dest) == 80) {
     //process
-    //blacklist(packet, length, verbose);
+    blacklist(packet, length, verbose);
     return;
   }
 
@@ -151,9 +142,11 @@ void analyse(int length,
       if (strcmp(inet_ntoa(ip->ip_src), "10.0.2.15") != 0){
         //insert IP address to dynamic array
 
+        // DEBUGGING PRINTS
         if (verbose == 1) {
-          printf("----PACKET RECEIVED----\n");
+          printf("----SYN PACKET RECEIVED----\n");
           printf("Source IP address: %s\n", inet_ntoa(ip->ip_src));
+          printf("Destination IP address: %s\n", inet_ntoa(ip->ip_dst));
           printf("Source Port: %d\n", ntohs(tcp->source));
           printf("Destination Port: %d\n", ntohs(tcp->dest));
           printf("SYN: %d\n", tcp->syn);
@@ -161,6 +154,7 @@ void analyse(int length,
           printf("\n");
 
         }
+        //lock
         pthread_mutex_lock(&syn_lock);
         dynarray_insert(&syn_adds, inet_ntoa(ip->ip_src));
         //increment count
