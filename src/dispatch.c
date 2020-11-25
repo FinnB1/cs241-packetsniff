@@ -59,13 +59,14 @@ void * dequeue(void * arg) {
       }
       // decrease size variable
       packets--;
-      // free head
-      free(tmp);
+      // free head and packet data stored 
       //unlock
       pthread_mutex_unlock( & lock);
       // send packet for analysis
       analyse(packet2go -> length, packet2go -> packet, v);
       // free stored packet
+      free((void *)tmp->packet);
+      free(tmp);
       free(packet2go);
     } else {
       // unlock

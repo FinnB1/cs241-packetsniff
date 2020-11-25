@@ -116,6 +116,7 @@ void analyse(int length,
   if (ntohs(eth_header -> ether_type) == ETHERTYPE_ARP) {
     //process
     arp(packet, verbose);
+    return;
   }
 
   //move past ethernet header

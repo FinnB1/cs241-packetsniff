@@ -19,10 +19,8 @@ void dynarray_init(dynamic_array * dynarray, size_t size) {
 int check_unique(dynamic_array * dynarray, char * address) {
   //loop through array
   for (int i = 0; i < dynarray -> used; i++) {
-    char * ip = (char * ) malloc(sizeof(address));
-    ip = (char * ) dynarray -> array[i];
     // if ip already exists return 0
-    if (strcmp(ip, address) == 0) {
+    if (strcmp((char * ) dynarray -> array[i], address) == 0) {
       return 0;
     }
   }
