@@ -35,7 +35,10 @@ int blacklist_count = 0;
 int v;
 
 
-// Signal handler
+/**
+* Handles exiting of program by breaking packet capture loop
+* @param signo signal value
+*/
 void sig_handler(int signo) {
   // If Ctrl C Signal received
   if (signo == SIGINT) {
@@ -44,14 +47,23 @@ void sig_handler(int signo) {
   }
 }
 
-// function called by pcap loop to transfer packets for dispatch
+/**
+* Function called by packet capture loop when packet arrives, sending packet off to dispatch
+* @param placeholder satisfy method signature
+* @param header packet header
+* @param packet data
+*/
 void pre_dispatch(u_char * placeholder,
   const struct pcap_pkthdr * header,
     const unsigned char * packet) {
   dispatch((struct pcap_pkthdr *) header, packet, v);
 }
 
-// Application main sniffing loop
+/**
+* Sniff for packets, printing a report of findings upon breaking the loop and exiting.
+* @param interface interface to sniff on
+* @param verbose debugging flag
+*/
 void sniff(char * interface, int verbose) {
   v = verbose;
   // Open network interface for packet capture

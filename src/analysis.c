@@ -22,6 +22,11 @@ pthread_mutex_t syn_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t blacklist_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t arp_lock = PTHREAD_MUTEX_INITIALIZER;
 
+/**
+* Detects ARP response messages and counts them.
+* @param packet packet data to search
+* @param verbose debugging flag
+*/
 void arp(const unsigned char * packet, int verbose) {
   // ethernet arp structure
   packet += ETH_HLEN;
@@ -73,13 +78,16 @@ void arp(const unsigned char * packet, int verbose) {
   }
 }
 
-// URL blacklisting function
-void blacklist(const unsigned char * packet, int length, int verbose) {
+/**
+* Detects outgoing HTTP requests to blacklisted URLs and counts them.
+* @param packet packet data to search
+* @param verbose debugging flag
+*/
+void blacklist(const unsigned char * packet, int verbose) {
   //tcp header
   struct tcphdr * tcp = (struct tcphdr * ) packet;
   //move past tcp header to packet data
   packet += tcp -> doff * 4;
-  length -= tcp -> doff * 4;
 
   // convert packet data to char * (bad code)
   char * payload = (char * ) packet;
@@ -105,7 +113,12 @@ void blacklist(const unsigned char * packet, int length, int verbose) {
 
 }
 
-//main analyse function
+/**
+* Processes packets and calls other specific methods to detect attacks. Includes in-built syn flooding attack check.
+* @param length current length of packet data processed
+* @param packet packet data to search
+* @param verbose debugging flag
+*/
 void analyse(int length,
   const unsigned char * packet, int verbose) {
   //headers
@@ -141,7 +154,7 @@ void analyse(int length,
   // check if ip is src (aka packet is outgoing) and port is 80 (http)
   if (strcmp(inet_ntoa(ip -> ip_src), "10.0.2.15") == 0 && ntohs(tcp -> dest) == 80) {
     //process
-    blacklist(packet, length, verbose);
+    blacklist(packet, verbose);
     return;
   }
 

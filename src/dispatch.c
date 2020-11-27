@@ -28,7 +28,10 @@ int run = 0;
 int packets = 0;
 int v;
 
-// Dequeue function
+/**
+* Dequeues and calls analysis on next available packet OR engages threads in waiting for more packets to arrive
+* @param arg placeholder to satisfy method signature
+*/
 void * dequeue(void * arg) {
   // while threads are active
   while (run) {
@@ -77,7 +80,11 @@ void * dequeue(void * arg) {
   return NULL;
 }
 
-// enqueue function
+/**
+* Sets up and enqueues incoming packets by converting them to packet_queue structures and linking them together.
+* @param length length of packet
+* @param packet packet data
+*/
 void enqueue(int length,
   const unsigned char * packet) {
   // lock
@@ -111,7 +118,10 @@ void enqueue(int length,
   // unlock
   pthread_mutex_unlock( & lock);
 }
-//function to join threads on exit
+
+/**
+* Join all threads including waiting threads by broadcasting signal. Destroy locks.
+*/
 void close_threads() {
   //lock
   pthread_mutex_lock( & lock);
@@ -131,7 +141,13 @@ void close_threads() {
     pthread_join(threads[i], NULL);
   }
 }
-// main dispatch function
+
+/**
+* Creates threads, processes incoming packets and sends them to be queued up including copying packet data to memory.
+* @param header packet header
+* @param packet packet data
+* @param verbose debugging flag
+*/
 void dispatch(struct pcap_pkthdr * header,
   const unsigned char * packet, int verbose) {
   int i;
